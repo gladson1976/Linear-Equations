@@ -1,0 +1,254 @@
+<html>
+<head>
+	<style>
+		* {
+			font-family: Verdana;
+			font-size: 8pt;
+		}
+	</style>
+
+	<script src="jquery-2.0.2.js"></script>
+	<script>
+		function Matrix(ary) {
+			this.mtx = ary;
+			this.height = ary.length;
+			this.width = ary[0].length;
+		}
+
+		// IdentityMatrix is a "subclass" of Matrix
+		function IdentityMatrix(n) {
+			this.height = n;
+			this.width = n;
+			this.mtx = [];
+			for (var i = 0; i < n; i++) {
+				this.mtx[i] = [];
+				for (var j = 0; j < n; j++) {
+					this.mtx[i][j] = (i == j ? 1 : 0);
+				}
+			}
+		}
+		IdentityMatrix.prototype = Matrix.prototype;
+ 
+		Matrix.prototype.rows = function() {
+			return this.height;
+		}
+
+		Matrix.prototype.columns = function() {
+			return this.width;
+		}
+
+		Matrix.prototype.toString = function() {
+			var s = []
+			for (var i = 0; i < this.mtx.length; i++) 
+				s.push( this.mtx[i].join(",") );
+			return s.join("\n");
+		}
+		 
+		Matrix.prototype.transpose = function() {
+			var transposed = [];
+			for (var i = 0; i < this.width; i++) {
+				transposed[i] = [];
+				for (var j = 0; j < this.height; j++) {
+					transposed[i][j] = this.mtx[j][i];
+				}
+			}
+			return new Matrix(transposed);
+		}
+
+		Matrix.prototype.multiply = function(other) {
+			if (this.width != other.height) {
+				throw "error: incompatible sizes";
+			}
+		 
+			var result = [];
+			for (var i = 0; i < this.height; i++) {
+				result[i] = [];
+				for (var j = 0; j < other.width; j++) {
+					var sum = 0;
+					for (var k = 0; k < this.width; k++) {
+						sum += this.mtx[i][k] * other.mtx[k][j];
+					}
+					result[i][j] = sum;
+				}
+			}
+			return new Matrix(result); 
+		}
+		
+		Matrix.prototype.toReducedRowEchelonForm = function() {
+			var lead = 0;
+			for (var r = 0; r < this.rows(); r++) {
+				if (this.columns() <= lead) {
+					return;
+				}
+				var i = r;
+				while (this.mtx[i][lead] == 0) {
+					i++;
+					if (this.rows() == i) {
+						i = r;
+						lead++;
+						if (this.columns() == lead) {
+							return;
+						}
+					}
+				}
+		 
+				var tmp = this.mtx[i];
+				this.mtx[i] = this.mtx[r];
+				this.mtx[r] = tmp;
+		 
+				var val = this.mtx[r][lead];
+				for (var j = 0; j < this.columns(); j++) {
+					this.mtx[r][j] /= val;
+				}
+		 
+				for (var i = 0; i < this.rows(); i++) {
+					if (i == r) continue;
+					val = this.mtx[i][lead];
+					for (var j = 0; j < this.columns(); j++) {
+						this.mtx[i][j] -= val * this.mtx[r][j];
+					}
+				}
+				lead++;
+			}
+			return this;
+		}
+
+		Matrix.prototype.exp = function(n) {
+			var result = new IdentityMatrix(this.height);
+			for (var i = 1; i <= n; i++) {
+				result = result.mult(this);
+			}
+			return result;
+		}
+/*
+x + 2y - z = -4
+2x + 3y - z = -11
+-2x +0y - 3z = 22
+
+x = -8
+y = 1
+z = -2
+		var m = new Matrix([
+		  [ 1, 2, -1, -4], 
+		  [ 2, 3, -1, -11], 
+		  [-2, 0, -3,  22] 
+		]);
+		console.log(m.toReducedRowEchelonForm());
+*/
+	</script>
+
+	<script>
+		var intUnknown;
+		//var arrValues = ["x + 2y - z = -4", "2x + 3y - z = -11", "-2x + 0y - 3z = 22"]
+		//var arrValues = ["x + 2y - z = -4", "2x + 3y - z = -11", "-2x - 3z = 22"]
+		//var arrValues = ["a + b = 3", "b - c + d = 8", "a - 2d = -9", "c + d = 4"]
+		//var arrValues = ["a+b=240", "c+d=500", "-b+c+d=455", "a+c=215"]
+		//var arrValues = ["a+b=240", "c+d=500", "d-b+c=455", "a+c=215"]
+		//var arrValues = ["a + b = 240", "c + d = 500", "d - b + c = 455", "a + c = 215"]
+		
+		jQuery(function(){
+			jQuery("#cmdInit").click(initMatrix);
+			jQuery("#cmdClear").click(clearMatrix);
+			jQuery("#tMatrix").on("click", "#cmdCompute", computeMatrix);
+		});
+	
+		function initMatrix(){
+			var strMatrix = "";
+			intUnknown = jQuery("#txtUnknown").val();
+			for(var i=0;i<intUnknown;i++){
+				//strMatrix += "<tr><td><input type='text' id='txtEquation_"+(i+1)+"' size='40' value='"+arrValues[i]+"'></td></tr>";
+				strMatrix += "<tr><td><input type='text' id='txtEquation_"+(i+1)+"' size='40' value=''></td></tr>";
+			}
+			strMatrix += "<tr><td align='right'><input type='button' id='cmdCompute' value='Compute'></td></tr>";
+
+			jQuery("#tMatrix").show();
+			jQuery("#tMatrix").html(strMatrix);
+		}
+		
+		function clearMatrix(){
+			jQuery("#txtUnknown").val("");
+			jQuery("#tMatrix").empty().hide();
+		}
+		
+		function computeMatrix(){
+			var arrMatrix = new Array(), arrOut, arrEq, arrEqNames, arrTemp, arrT, X, V, P;
+			var strEq = "", strEqNames = "";
+			var arrVariables = new Array();
+			
+			for(var i=1;i<=intUnknown;i++){
+				strEqNames = jQuery("#txtEquation_"+i).val();
+				strEqNames = strEqNames.replace(/[^a-zA-Z]/g, ' ').replace( /\s\s+/g, ' ' ).replace(/^[ \t]+/g, '');
+				//console.log(strEqNames)
+				arrEqNames = strEqNames.split(" ");
+				for(var j=0;j<arrEqNames.length-1;j++){
+					if(arrVariables.indexOf(arrEqNames[j])==-1){
+						arrVariables.push(arrEqNames[j]);
+					}
+				}
+			}
+			
+			if(intUnknown!=arrVariables.length){
+				strMatrix="<tr><td><font color='red'><b>ERROR:</b><br />Number of variables should be equal to number of equations!</font></td></tr>";
+				jQuery("#tMatrix").append(strMatrix);
+				return;
+			}
+			//console.log(arrVariables)
+			
+			for(var i=1;i<=intUnknown;i++){
+				strEq = jQuery("#txtEquation_"+i).val();
+
+				strEq = strEq.replace(/\s\s+/g, ' ');
+				arrEq = new Array(arrVariables.length+1)
+				for(var j=0;j<arrEq.length;j++){
+					arrEq[j]=0;
+				}
+				
+				arrTemp=strEq.split("=");
+				//console.log(arrTemp[0].replace('-', ' -').replace(/[^0123456789a-zA-Z.-\s]/g, ' ').replace('- ', '-').replace(/  +/g,' '))
+				arrTemp[0]=arrTemp[0].replace('-', ' -').replace(/[^0123456789a-zA-Z.-\s]/g, ' ').replace('- ', '-').replace(/  +/g,' ').trim().split(' ');
+				arrTemp[1]=parseInt(arrTemp[1].trim());
+				//console.log(arrTemp[1])
+
+				arrEq[arrEq.length-1]=arrTemp[1];
+				
+				for(var j=0;j<arrTemp[0].length;j++){
+					X=arrTemp[0][j].substring(arrTemp[0][j].length-1)
+					V=arrTemp[0][j].substring(0, arrTemp[0][j].length-1)
+					P=arrVariables.indexOf(X);
+					if(V=="") V=1;
+					if(V=="-") V=-1;
+					//console.log(X+", "+V+" = "+P)
+					arrEq[P]=parseInt(V);
+				}
+				
+				arrMatrix.push(arrEq);
+			}
+			console.log(arrMatrix)
+			
+			var objMatrix=new Matrix(arrMatrix);
+			objMatrix.toReducedRowEchelonForm();
+			
+			strMatrix="<tr><td><font color='blue'><b>Results:</b></font><br />";
+			for(var i=0;i<intUnknown;i++){
+				strMatrix+=arrVariables[i]+" = "+objMatrix.mtx[i][intUnknown]+"<br />";
+			}
+			strMatrix+="</td></tr>";
+			jQuery("#tMatrix").append(strMatrix);
+		}
+	</script>
+</head>
+<body>
+	<table border="0" id="tInput">
+		<tr>
+			<td>No. of Equations</td>
+			<td><input type="text" id="txtUnknown" size="4"></td>
+			<td>
+				<input type="button" id="cmdInit" value="Initialize">&nbsp;
+				<input type="button" id="cmdClear" value="Clear">
+			</td>
+		</tr>
+	</table>
+	<table border="0" id="tMatrix" style="display:none;">
+	</table>
+</body>
+</html>
