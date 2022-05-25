@@ -7,7 +7,8 @@ x + 2y - z = -4<br />
 2x + 3y - z = -11<br />
 -2x +0y - 3z = 22<br />
 
-The results will be displayed :)<br />
-x = -8
-y = 1
+The results will be displayed :)
+
+x = -8<br />
+y = 1<br />
 z = -2
