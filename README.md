@@ -5,7 +5,7 @@ Enter the number of variables in the equation and then enter the equations in th
 
 x + 2y - z = -4<br />
 2x + 3y - z = -11<br />
--2x +0y - 3z = 22<br />
+-2x + 0y - 3z = 22<br />
 
 The results will be displayed :)
 
